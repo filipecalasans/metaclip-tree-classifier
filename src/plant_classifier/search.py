@@ -36,5 +36,33 @@ class PlantSearchIndex:
         top_indices = scores.argsort(descending=True)[:top_k]
         return [(self._paths[i], scores[i].item()) for i in top_indices]
 
+    def search_by_image(
+        self,
+        image: Image.Image | str | Path,
+        top_k: int = 5,
+        exclude_self: bool = True,
+    ) -> list[tuple[Path, float]]:
+        """
+        Find the most visually similar images in the index to a query image.
+
+        If the query image is itself in the index and exclude_self is True,
+        the exact match is removed from the results.
+        """
+        if not self._embeddings:
+            raise RuntimeError("Index is empty — add images before searching.")
+        query_path = Path(image) if not isinstance(image, Image.Image) else None
+        query_features = self.encoder.encode_image(image).cpu()
+        all_embeddings = torch.cat(self._embeddings, dim=0)  # (N, D)
+        scores = (all_embeddings @ query_features.T).squeeze()
+        ranked = scores.argsort(descending=True)
+        results = []
+        for i in ranked:
+            if exclude_self and query_path is not None and self._paths[i] == query_path:
+                continue
+            results.append((self._paths[i], scores[i].item()))
+            if len(results) == top_k:
+                break
+        return results
+
     def __len__(self) -> int:
         return len(self._paths)

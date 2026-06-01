@@ -51,6 +51,48 @@ plant-classify search data/images/ "subalpine fir at treeline"
 plant-classify search data/images/ "coastal rainforest conifer" --top-k 3
 ```
 
+### Image-to-image search (Python API)
+
+`PlantSearchIndex` also supports finding visually similar images using another image as the query, bypassing text entirely. This is useful for species whose defining traits are visual (bark texture, leaf shape) rather than well-represented in language.
+
+```python
+from plant_classifier.search import PlantSearchIndex
+
+index = PlantSearchIndex(variant="base")
+index.add_directory("data/reference/")  # folder of labeled reference images
+
+# Find images most visually similar to an unknown photo
+results = index.search_by_image("data/unknown.jpg", top_k=3)
+for path, score in results:
+    print(f"[{score:.3f}]  {path}")
+```
+
+If the query image is already in the index, the exact match is automatically excluded (`exclude_self=True` by default).
+
+#### Reference image naming convention
+
+To recover a species label from a result path programmatically, follow this filename convention:
+
+```
+{species_name_with_underscores}_{index}.jpg
+```
+
+Examples: `pacific_madrone_01.jpg`, `western_hemlock_02.jpg`, `douglas_fir_01.jpg`
+
+The slug maps back to a `PNW_TREES` key via:
+
+```python
+from plant_classifier.species import PNW_TREES
+from pathlib import Path
+
+slug_to_species = {k.lower().replace(" ", "_"): k for k in PNW_TREES}
+
+path, score = results[0]
+slug = "_".join(path.stem.split("_")[:-1])
+predicted = slug_to_species.get(slug, "unknown")
+print(f"Predicted: {predicted}  ({score:.3f})")
+```
+
 ### Model variants
 
 | Flag | Architecture | Pretrained on |
@@ -108,7 +150,7 @@ Reproduction: `python scripts/pairwise_similarity_habitat.py`
 
 ### Key takeaway
 
-Habitat context in text prompts is a highly effective zero-shot specialization strategy for conifer species that occupy distinct ecological niches. For species defined primarily by visual morphology (bark texture, cone shape) or that co-occur in the same habitat, text prompts alone may be insufficient — supplementing with example images via `PlantSearchIndex` is recommended.
+Habitat context in text prompts is a highly effective zero-shot specialization strategy for conifer species that occupy distinct ecological niches. For species defined primarily by visual morphology (bark texture, cone shape) or that co-occur in the same habitat, text prompts alone may be insufficient — supplementing with example images via `PlantSearchIndex.search_by_image` is recommended.
 
 ---
 
@@ -118,7 +160,7 @@ Habitat context in text prompts is a highly effective zero-shot specialization s
 ├── src/plant_classifier/
 │   ├── encoder.py       # MetaCLIP image and text encoder wrapper
 │   ├── classifier.py    # Zero-shot classifier with prompt ensembling
-│   ├── search.py        # Text-to-image search index
+│   ├── search.py        # Text-to-image and image-to-image search index
 │   ├── species.py       # PNW_TREES and PLANT_SPECIES definitions
 │   └── cli.py           # plant-classify entry point
 ├── scripts/
