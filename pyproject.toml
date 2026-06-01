@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "plant-classifier"
+version = "0.1.0"
+description = "Zero-shot plant species classification using MetaCLIP"
+requires-python = ">=3.10"
+dependencies = [
+    "open_clip_torch>=2.24.0",
+    "Pillow>=10.0.0",
+    "torch>=2.3.0",
+    "torchvision>=0.18.0",
+    "numpy>=1.26.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-cov"]
+
+[project.scripts]
+plant-classify = "plant_classifier.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
